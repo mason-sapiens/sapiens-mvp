@@ -1,0 +1,74 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-1
+
+    - name: Deploy to EC2
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        EC2_USER: ubuntu
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        # Setup SSH
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+
+        # Add EC2 to known hosts
+        ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+        # Create deployment script
+        cat > deploy.sh << 'EOF'
+        #!/bin/bash
+        set -e
+
+        echo "🚀 Starting deployment..."
+
+        # Navigate to project directory
+        cd ~/MVP
+
+        # Pull latest changes
+        git fetch origin
+        git reset --hard origin/main
+
+        # Rebuild and restart containers
+        sudo docker compose down
+        sudo docker compose build --no-cache
+        sudo docker compose up -d
+
+        # Wait for services to be healthy
+        echo "⏳ Waiting for services..."
+        sleep 10
+
+        # Check health
+        if curl -f http://localhost:8000/health; then
+          echo "✅ Deployment successful!"
+        else
+          echo "❌ Deployment failed - health check failed"
+          exit 1
+        fi
+        EOF
+
+        # Copy and execute deployment script
+        scp -i ~/.ssh/deploy_key deploy.sh $EC2_USER@$EC2_HOST:~/
+        ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST 'bash ~/deploy.sh'
+
+        echo "✅ Deployment completed successfully!"
