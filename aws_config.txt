@@ -1,0 +1,16 @@
+# AWS Configuration for Sapiens MVP
+Region: us-west-1
+VPC ID: vpc-0af8de18b8d0e7a58
+Public Subnet 1: subnet-088b461c2ec7cfd3d
+Public Subnet 2: subnet-068afcd78790941b5
+Private Subnet 1: subnet-0f1df765d327008da
+Private Subnet 2: subnet-05a7d47b8487ee40d
+EC2 Security Group: sg-0007c8e559dd1cb15
+RDS Security Group: sg-073144e7b8f471fcc
+RDS Endpoint: sapiens-mvp-db.cbo244ukeq6v.us-west-1.rds.amazonaws.com
+PostgreSQL Version: 18.1
+Database Name: sapiens
+Database Username: sapiens
+Database Password: 33bsd1sSAUE5pwqRKm8dO28A1
+
+DATABASE_URL: postgresql://sapiens:33bsd1sSAUE5pwqRKm8dO28A1@sapiens-mvp-db.cbo244ukeq6v.us-west-1.rds.amazonaws.com:5432/sapiens
