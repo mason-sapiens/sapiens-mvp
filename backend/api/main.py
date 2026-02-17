@@ -144,6 +144,14 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail="Orchestrator not initialized")
 
     try:
+        # Debug logging
+        logger.info(
+            "chat_request_received",
+            user_id=request.user_id,
+            room_id=request.room_id,
+            has_room_id=request.room_id is not None
+        )
+
         # Process message
         response = orchestrator.process_user_message(
             user_id=request.user_id,
