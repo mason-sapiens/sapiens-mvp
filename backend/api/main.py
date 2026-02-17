@@ -81,6 +81,7 @@ class ChatRequest(BaseModel):
 
     user_id: str
     message: str
+    room_id: Optional[str] = None  # Room ID for conversation separation
 
 
 class ChatResponse(BaseModel):
@@ -146,11 +147,13 @@ async def chat(request: ChatRequest):
         # Process message
         response = orchestrator.process_user_message(
             user_id=request.user_id,
-            message=request.message
+            message=request.message,
+            room_id=request.room_id
         )
 
-        # Get updated state
-        user_state = orchestrator.logging_module.load_user_state(request.user_id)
+        # Get updated state (use room_id if provided)
+        state_key = f"{request.user_id}_{request.room_id}" if request.room_id else request.user_id
+        user_state = orchestrator.logging_module.load_user_state(state_key)
 
         return ChatResponse(
             user_id=request.user_id,

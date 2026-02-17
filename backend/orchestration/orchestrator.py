@@ -103,7 +103,8 @@ class Orchestrator:
     def process_user_message(
         self,
         user_id: str,
-        message: str
+        message: str,
+        room_id: Optional[str] = None
     ) -> str:
         """
         Main entry point for processing user messages.
@@ -111,19 +112,23 @@ class Orchestrator:
         Args:
             user_id: User ID
             message: User's message
+            room_id: Optional room ID for conversation separation
 
         Returns:
             Response message for user
         """
 
         try:
+            # Create state key - use composite key if room_id provided
+            state_key = f"{user_id}_{room_id}" if room_id else user_id
+
             # Log user message
-            self.logging_module.log_user_message(user_id, message)
+            self.logging_module.log_user_message(state_key, message)
 
             # Load or create user state
-            user_state = self.logging_module.load_user_state(user_id)
+            user_state = self.logging_module.load_user_state(state_key)
             if not user_state:
-                user_state = self._create_new_user_state(user_id)
+                user_state = self._create_new_user_state(state_key, user_id)
 
             # Process based on current state
             response = self._route_by_state(user_state, message)
@@ -134,7 +139,7 @@ class Orchestrator:
 
             # Log agent response
             self.logging_module.log_agent_response(
-                user_id,
+                state_key,
                 "MainChat",
                 response
             )
@@ -142,20 +147,25 @@ class Orchestrator:
             return response
 
         except Exception as e:
-            logger.error("Error processing message", user_id=user_id, error=str(e))
+            logger.error("Error processing message", user_id=user_id, room_id=room_id, error=str(e))
             return f"I encountered an error processing your message. Please try again. Error: {str(e)}"
 
-    def _create_new_user_state(self, user_id: str) -> UserState:
-        """Create new user state."""
+    def _create_new_user_state(self, state_key: str, user_id: str) -> UserState:
+        """Create new user state.
+
+        Args:
+            state_key: Key for storing state (user_id or user_id_room_id)
+            user_id: Actual user ID for reference
+        """
 
         user_state = UserState(
-            user_id=user_id,
+            user_id=state_key,  # Use state_key as the identifier
             current_state=StateType.ONBOARDING
         )
 
         self.logging_module.save_user_state(user_state)
 
-        logger.info("Created new user state", user_id=user_id)
+        logger.info("Created new user state", user_id=user_id, state_key=state_key)
 
         return user_state
 
