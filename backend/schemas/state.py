@@ -24,7 +24,8 @@ class UserState(BaseModel):
     The Orchestrator uses this as the single source of truth.
     """
 
-    user_id: str
+    user_id: str  # Actual user ID
+    room_id: Optional[str] = None  # Room ID for conversation separation
     current_state: StateType
     previous_state: Optional[StateType] = None
 

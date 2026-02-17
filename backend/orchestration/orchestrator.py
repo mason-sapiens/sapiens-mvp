@@ -128,7 +128,7 @@ class Orchestrator:
             # Load or create user state
             user_state = self.logging_module.load_user_state(state_key)
             if not user_state:
-                user_state = self._create_new_user_state(state_key, user_id)
+                user_state = self._create_new_user_state(state_key, user_id, room_id)
 
             # Process based on current state
             response = self._route_by_state(user_state, message)
@@ -150,22 +150,24 @@ class Orchestrator:
             logger.error("Error processing message", user_id=user_id, room_id=room_id, error=str(e))
             return f"I encountered an error processing your message. Please try again. Error: {str(e)}"
 
-    def _create_new_user_state(self, state_key: str, user_id: str) -> UserState:
+    def _create_new_user_state(self, state_key: str, user_id: str, room_id: Optional[str] = None) -> UserState:
         """Create new user state.
 
         Args:
             state_key: Key for storing state (user_id or user_id_room_id)
             user_id: Actual user ID for reference
+            room_id: Optional room ID for conversation separation
         """
 
         user_state = UserState(
-            user_id=state_key,  # Use state_key as the identifier
+            user_id=user_id,  # Keep actual user ID
+            room_id=room_id,  # Store room ID separately
             current_state=StateType.ONBOARDING
         )
 
-        self.logging_module.save_user_state(user_state)
+        self.logging_module.save_user_state_with_key(user_state, state_key)
 
-        logger.info("Created new user state", user_id=user_id, state_key=state_key)
+        logger.info("Created new user state", user_id=user_id, room_id=room_id, state_key=state_key)
 
         return user_state
 
@@ -799,7 +801,9 @@ class Orchestrator:
             reason=reason
         )
 
-        self.logging_module.log_state_transition(transition, user_state.user_id)
+        # Construct state key for logging
+        state_key = f"{user_state.user_id}_{user_state.room_id}" if user_state.room_id else user_state.user_id
+        self.logging_module.log_state_transition(transition, state_key)
 
         # Update state
         user_state.previous_state = user_state.current_state

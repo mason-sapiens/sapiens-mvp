@@ -83,16 +83,40 @@ class LoggingModule:
     # ========================================================================
 
     def save_user_state(self, state: UserState) -> None:
-        """Save user state."""
+        """Save user state. Automatically constructs composite key if room_id exists."""
 
-        user_dir = self._get_user_dir(state.user_id)
+        # Construct state key - use composite key if room_id exists
+        if state.room_id:
+            state_key = f"{state.user_id}_{state.room_id}"
+        else:
+            state_key = state.user_id
+
+        user_dir = self._get_user_dir(state_key)
         state_file = user_dir / "state.json"
 
         self._save_json(state_file, state)
 
         self.logger.info(
             "user_state_saved",
+            state_key=state_key,
             user_id=state.user_id,
+            room_id=state.room_id,
+            current_state=state.current_state
+        )
+
+    def save_user_state_with_key(self, state: UserState, state_key: str) -> None:
+        """Save user state with a custom key (for room-specific states)."""
+
+        user_dir = self._get_user_dir(state_key)
+        state_file = user_dir / "state.json"
+
+        self._save_json(state_file, state)
+
+        self.logger.info(
+            "user_state_saved",
+            state_key=state_key,
+            user_id=state.user_id,
+            room_id=state.room_id,
             current_state=state.current_state
         )
 
