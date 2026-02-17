@@ -222,9 +222,9 @@ class Orchestrator:
         if not user_state.target_role:
             welcome = self.main_chat.generate_message("welcome", {})
 
-            # Check if message contains role info
-            if message and len(message) > 10:
-                # Try to extract role from initial message
+            # Check if message contains role info (but not the START trigger)
+            if message and message.strip() and message != "START":
+                # Save the role and move to next step
                 user_state.target_role = message
                 user_state.context["onboarding_step"] = "domain"
                 self.logging_module.save_user_state(user_state)
