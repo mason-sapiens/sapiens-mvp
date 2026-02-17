@@ -29,5 +29,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
   CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
 
-# Run with gunicorn
-CMD ["gunicorn", "backend.api.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
+# Run with gunicorn (reduced to 1 worker to prevent OOM on limited memory instances)
+CMD ["gunicorn", "backend.api.main:app", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "--timeout", "120"]
