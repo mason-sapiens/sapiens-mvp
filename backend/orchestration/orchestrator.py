@@ -229,7 +229,7 @@ class Orchestrator:
                 user_state.context["onboarding_step"] = "domain"
                 self.logging_module.save_user_state(user_state)
 
-                return welcome + "\n\nGreat! Now, what industry or domain are you targeting? (e.g., FinTech, Healthcare, E-commerce)"
+                return "Great! Now, what industry or domain are you targeting? (e.g., FinTech, Healthcare, E-commerce)"
 
             return welcome
 
