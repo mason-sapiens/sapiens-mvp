@@ -86,21 +86,62 @@ Your task is to design a project that:
 1. Can be completed by ONE person in 2-3 weeks
 2. Clearly demonstrates skills relevant to the target role
 3. Appeals to recruiters and hiring managers
-4. Produces tangible, impressive deliverables
-5. Is grounded in real market or research problems
+4. Produces TANGIBLE, REAL-WORLD deliverables (not just mockups or plans)
+5. Is grounded in actual execution with measurable outcomes
 
-Project types:
-- RESEARCH: Market research, user research, competitive analysis, data analysis
-- PRODUCT: Product requirements, feature design, user flows, prototypes
-- CAMPAIGN: Marketing campaigns, content strategies, GTM plans
-- STARTUP: Business plans, MVP specs, market validation
+Project types and MANDATORY deliverable requirements:
+
+- RESEARCH:
+  • Must result in a completed research paper
+  • Paper must be uploaded to arXiv or similar repository
+  • Include hypothesis, methodology, data collection, analysis, and conclusions
+  • Deliverable: Published arXiv paper link
+
+- PRODUCT:
+  • Must be fully built and launched (not just designed)
+  • Real users must be acquired (minimum viable user base)
+  • Product must be live and accessible
+  • Deliverable: Live product URL + user metrics
+
+- CAMPAIGN:
+  • Campaign must be personally designed AND executed
+  • Data must be collected and analyzed from real execution
+  • Include pre/post metrics and performance analysis
+  • Deliverable: Campaign results report with actual performance data
+
+- STARTUP:
+  • Must involve launching a small-scale venture
+  • Real monetization must be attempted (even if minimal revenue)
+  • Include validation, launch, and early traction metrics
+  • Deliverable: Live business + revenue/traction data
+
+- MARKETING (Reports/Analysis):
+  • Report must be completed to professional standards
+  • Must be sent to relevant stakeholders (real or simulated)
+  • Include actionable insights and recommendations
+  • Deliverable: Published report + stakeholder engagement proof
+
+CRITICAL REQUIREMENTS:
+- All projects must result in REAL execution, not just documentation
+- Deliverables must be tangible and verifiable (live links, published content, real data)
+- Projects should create actual value in the real world
+- Avoid purely hypothetical or planning-only projects
+- Focus on building/creating/launching something real that others can see and interact with
 
 Guidelines:
 - Projects must be realistic and achievable in 2-3 weeks
-- Deliverables must be tangible (documents, prototypes, presentations)
-- Avoid projects requiring specialized equipment or large teams
-- Focus on demonstrating analytical, strategic, and execution skills
-- Ensure projects can be completed independently
+- Must be completable independently without large teams or specialized resources
+- Focus on demonstrating execution capability, not just strategic thinking
+- Ensure projects can be showcased with concrete proof of completion
+- Balance ambition with feasibility
+
+MANDATORY: Include a simple roadmap with clear milestones.
+The roadmap must:
+- Outline 4-6 key milestones spanning the project timeline
+- Specify expected completion level at each milestone (e.g., "Foundation ready", "MVP complete", "Live with initial users")
+- Include concrete checkpoints that demonstrate progress
+- Make it clear what "done" looks like at each stage
+- Do NOT specify exact days or dates, just the sequence of milestones
 
 Output your response in this exact format:
 
@@ -110,18 +151,44 @@ Output your response in this exact format:
 [Concise, professional project title]
 
 ## Type
-[RESEARCH/PRODUCT/CAMPAIGN/STARTUP]
+[RESEARCH/PRODUCT/CAMPAIGN/STARTUP/MARKETING]
 
 ## Description
 [2-3 paragraphs describing the project and its context]
+[MUST emphasize real-world execution and tangible outcomes]
 
 ## Why Relevant
 [Explain why this project is perfect for this role and domain]
 
 ## Deliverables
-1. [Deliverable name]: [Description] - Format: [PDF/Figma/Slides/etc]
+1. [Deliverable name]: [Description] - Format: [Specific format]
+   Real-world outcome: [What will actually be launched/published/executed]
    Evaluation criteria: [criterion 1], [criterion 2], [criterion 3]
 2. [Continue for each deliverable]
+[MUST include at least one deliverable that is live/public/real]
+
+## Project Roadmap
+Milestone 1: [Milestone name]
+- Tasks: [What needs to be done]
+- Expected outcome: [Specific state or completion level]
+
+Milestone 2: [Milestone name]
+- Tasks: [What needs to be done]
+- Expected outcome: [Specific state or completion level]
+
+Milestone 3: [Milestone name]
+- Tasks: [What needs to be done]
+- Expected outcome: [Specific state or completion level]
+
+Milestone 4: [Milestone name]
+- Tasks: [What needs to be done]
+- Expected outcome: [Specific state or completion level]
+
+[Continue for 4-6 milestones total]
+
+Final Milestone: [Launch/Publication/Completion]
+- Tasks: [Final steps]
+- Expected outcome: [Live/Published/Launched with tangible proof]
 
 ## Skills Demonstrated
 - [Skill 1]
@@ -130,6 +197,7 @@ Output your response in this exact format:
 
 ## Recruiter Appeal
 [Why recruiters will be impressed by this project]
+[Emphasize the real-world execution aspect]
 
 ## Evaluation Criteria
 1. [Criterion 1]
@@ -145,7 +213,8 @@ Output your response in this exact format:
 3. [Alternative 3]: [Brief description]
 
 ## Reasoning
-[Why this project was selected over alternatives]"""
+[Why this project was selected over alternatives]
+[Explain how it balances ambition with 2-3 week feasibility]"""
 
     def _build_user_prompt(
         self,
