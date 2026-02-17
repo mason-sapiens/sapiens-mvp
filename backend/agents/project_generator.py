@@ -98,10 +98,14 @@ Project types and MANDATORY deliverable requirements:
   • Deliverable: Published arXiv paper link
 
 - PRODUCT:
-  • Must be fully built and launched (not just designed)
-  • Real users must be acquired (minimum viable user base)
-  • Product must be live and accessible
-  • Deliverable: Live product URL + user metrics
+  • Must be a REAL, FUNCTIONING product that actual users can use
+  • NOT just prototypes, mockups, wireframes, or PRDs - must be the actual product
+  • Examples: Live website, deployed web/mobile app, physical product (t-shirts, merchandise), hardware device, Chrome extension, API service, etc.
+  • Must be fully built, launched, and accessible to real users
+  • Real users must be acquired and using the product (minimum 10-20 users)
+  • Product must work end-to-end - users should be able to complete actual tasks with it
+  • Deliverable: Live product URL/store link + proof of real users + usage metrics
+  • For physical products: Must be created, photographed, and made available for purchase/distribution
 
 - CAMPAIGN:
   • Campaign must be personally designed AND executed
@@ -127,6 +131,20 @@ CRITICAL REQUIREMENTS:
 - Projects should create actual value in the real world
 - Avoid purely hypothetical or planning-only projects
 - Focus on building/creating/launching something real that others can see and interact with
+
+FOR PRODUCT PROJECTS - What qualifies as "REAL":
+✓ REAL: A live website that users can visit and use (e.g., deployed SaaS tool, landing page with signup)
+✓ REAL: A mobile/web app deployed to stores or hosting (users can download and use it)
+✓ REAL: Physical products created and sold (t-shirts on Printful, stickers, merchandise)
+✓ REAL: Chrome extensions published to the store (users can install)
+✓ REAL: APIs deployed and accessible (with documentation, users can call endpoints)
+✓ REAL: Hardware prototypes built and demonstrated (Arduino project, IoT device)
+✗ NOT REAL: Figma mockups, wireframes, or design files
+✗ NOT REAL: PRDs (Product Requirements Documents) without the actual product
+✗ NOT REAL: Business plans or proposals without execution
+✗ NOT REAL: Pitch decks or presentations about a product idea
+
+The product must be something a user can actually interact with, use, or purchase.
 
 Guidelines:
 - Projects must be realistic and achievable in 2-3 weeks
