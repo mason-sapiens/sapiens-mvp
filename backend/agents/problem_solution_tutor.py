@@ -104,10 +104,18 @@ Provide a thorough evaluation following the specified format."""
         strengths = self._parse_strengths(response)
         suggestions = self._parse_suggestions(response)
         next_steps = self._parse_next_steps(response)
+        field_feedback = self._parse_field_feedback(response)
 
         # Determine if passed
         avg_score = sum(scores.values()) / len(scores)
         passed = avg_score >= 7.0 and all(score >= 6.0 for score in scores.values())
+
+        # Include field feedback in overall feedback
+        feedback_with_fields = feedback + "\n\n# FIELD-SPECIFIC FEEDBACK\n\n"
+        feedback_with_fields += f"## Problem Statement\n{field_feedback['problem_statement']}\n\n"
+        feedback_with_fields += f"## Target Audience\n{field_feedback['target_audience']}\n\n"
+        feedback_with_fields += f"## Key Pain Points\n{field_feedback['key_pain_points']}\n\n"
+        feedback_with_fields += f"## Success Metrics\n{field_feedback['success_metrics']}\n\n"
 
         return ProblemSolutionTutorOutput(
             request_id=input_data.request_id,
@@ -115,7 +123,7 @@ Provide a thorough evaluation following the specified format."""
             mode="problem",
             evaluation_passed=passed,
             scores=scores,
-            overall_feedback=feedback,
+            overall_feedback=feedback_with_fields,
             strengths=strengths,
             improvement_suggestions=suggestions,
             next_steps=next_steps,
@@ -209,6 +217,19 @@ Output format:
 Market Relevance: [0-10]
 Clarity: [0-10]
 Feasibility: [0-10]
+
+# FIELD-SPECIFIC FEEDBACK
+## Problem Statement
+[Detailed feedback on the problem statement - what's good, what needs improvement, specific suggestions]
+
+## Target Audience
+[Detailed feedback on the target audience - is it specific enough? Any gaps? Suggestions for refinement]
+
+## Key Pain Points
+[Detailed feedback on the pain points - are they concrete? Do they align with the problem? What's missing?]
+
+## Success Metrics
+[Detailed feedback on success metrics - are they measurable? Realistic for 2-3 weeks? Suggestions for better metrics]
 
 # OVERALL FEEDBACK
 [2-3 paragraphs of constructive feedback]
@@ -371,6 +392,57 @@ Be constructive, specific, and encouraging. Focus on helping the user improve.""
                 next_steps.append(line)
 
         return '\n'.join(next_steps).strip() or "Revise based on feedback and resubmit."
+
+    def _parse_field_feedback(self, response: str) -> dict:
+        """Parse field-specific feedback for each question."""
+
+        field_feedback = {
+            "problem_statement": "",
+            "target_audience": "",
+            "key_pain_points": "",
+            "success_metrics": ""
+        }
+
+        lines = response.split('\n')
+        current_field = None
+        current_content = []
+
+        for line in lines:
+            # Check for field headers
+            if "## Problem Statement" in line:
+                if current_field and current_content:
+                    field_feedback[current_field] = '\n'.join(current_content).strip()
+                current_field = "problem_statement"
+                current_content = []
+            elif "## Target Audience" in line:
+                if current_field and current_content:
+                    field_feedback[current_field] = '\n'.join(current_content).strip()
+                current_field = "target_audience"
+                current_content = []
+            elif "## Key Pain Points" in line:
+                if current_field and current_content:
+                    field_feedback[current_field] = '\n'.join(current_content).strip()
+                current_field = "key_pain_points"
+                current_content = []
+            elif "## Success Metrics" in line:
+                if current_field and current_content:
+                    field_feedback[current_field] = '\n'.join(current_content).strip()
+                current_field = "success_metrics"
+                current_content = []
+            elif line.strip().startswith('# ') and current_field:
+                # New major section, save current field
+                if current_content:
+                    field_feedback[current_field] = '\n'.join(current_content).strip()
+                current_field = None
+                current_content = []
+            elif current_field and line.strip():
+                current_content.append(line)
+
+        # Save last field
+        if current_field and current_content:
+            field_feedback[current_field] = '\n'.join(current_content).strip()
+
+        return field_feedback
 
     def _parse_list_section(self, response: str, header: str) -> list:
         """Parse a list section."""
