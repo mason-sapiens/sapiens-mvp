@@ -347,29 +347,34 @@ class Orchestrator:
         if user_state.problem_approved:
             return "Your problem definition is already approved! Moving forward..."
 
-        # Store the answer and move to next step
+        # Store the answer, give feedback, and move to next step
         if current_step == "statement":
             user_state.context["problem_data"]["problem_statement"] = message
+            feedback = self._give_field_feedback(message, "problem_statement", user_state)
             user_state.context["problem_step"] = "audience"
             self.logging_module.save_user_state(user_state)
-            return self.main_chat.generate_message("problem_prompt", {"step": "audience"})
+            return feedback + "\n\n" + self.main_chat.generate_message("problem_prompt", {"step": "audience"})
 
         elif current_step == "audience":
             user_state.context["problem_data"]["target_audience"] = message
+            feedback = self._give_field_feedback(message, "target_audience", user_state)
             user_state.context["problem_step"] = "pain_points"
             self.logging_module.save_user_state(user_state)
-            return self.main_chat.generate_message("problem_prompt", {"step": "pain_points"})
+            return feedback + "\n\n" + self.main_chat.generate_message("problem_prompt", {"step": "pain_points"})
 
         elif current_step == "pain_points":
             user_state.context["problem_data"]["key_pain_points"] = message
+            feedback = self._give_field_feedback(message, "key_pain_points", user_state)
             user_state.context["problem_step"] = "metrics"
             self.logging_module.save_user_state(user_state)
-            return self.main_chat.generate_message("problem_prompt", {"step": "metrics"})
+            return feedback + "\n\n" + self.main_chat.generate_message("problem_prompt", {"step": "metrics"})
 
         elif current_step == "metrics":
             user_state.context["problem_data"]["success_metrics"] = message
-            # All fields collected, now evaluate
-            return self._evaluate_problem_from_steps(user_state)
+            feedback = self._give_field_feedback(message, "success_metrics", user_state)
+            # All fields collected, now do final evaluation
+            self.logging_module.save_user_state(user_state)
+            return feedback + "\n\n---\n\n**Great! You've completed all the fields. Let me evaluate your complete problem definition...**\n\n" + self._evaluate_problem_from_steps(user_state)
 
         elif current_step == "revising":
             # User is revising after failed evaluation
@@ -391,6 +396,68 @@ class Orchestrator:
             user_state.context["problem_data"] = {}
             self.logging_module.save_user_state(user_state)
             return self.main_chat.generate_message("problem_prompt", {"step": "statement"})
+
+    def _give_field_feedback(self, answer: str, field_name: str, user_state: UserState) -> str:
+        """Give immediate feedback on a single field answer."""
+
+        # Get project context for better feedback
+        project = self.logging_module.load_project(user_state.user_id, user_state.project_id)
+        project_context = f"Project: {project.proposal.title}" if project and project.proposal else ""
+
+        # Get previously answered fields for context
+        problem_data = user_state.context.get("problem_data", {})
+        previous_context = ""
+        if field_name == "target_audience" and problem_data.get("problem_statement"):
+            previous_context = f"\nProblem Statement: {problem_data['problem_statement']}"
+        elif field_name == "key_pain_points" and problem_data.get("problem_statement") and problem_data.get("target_audience"):
+            previous_context = f"\nProblem Statement: {problem_data['problem_statement']}\nTarget Audience: {problem_data['target_audience']}"
+        elif field_name == "success_metrics":
+            previous_context = f"\nProblem Statement: {problem_data.get('problem_statement', '')}\nTarget Audience: {problem_data.get('target_audience', '')}\nKey Pain Points: {problem_data.get('key_pain_points', '')}"
+
+        field_display_names = {
+            "problem_statement": "Problem Statement",
+            "target_audience": "Target Audience",
+            "key_pain_points": "Key Pain Points",
+            "success_metrics": "Success Metrics"
+        }
+
+        field_guidance = {
+            "problem_statement": "A strong problem statement is specific, clear, and focused on a real pain point. It should be 1-2 sentences.",
+            "target_audience": "A well-defined target audience is specific about who experiences the problem, their characteristics, and their situation.",
+            "key_pain_points": "Good pain points are concrete, specific challenges that the target audience faces. They should be measurable and observable.",
+            "success_metrics": "Strong success metrics are specific, measurable, and achievable within 2-3 weeks. They should clearly indicate whether the problem was addressed."
+        }
+
+        system_prompt = f"""You are a helpful tutor providing quick, constructive feedback on problem definition answers.
+
+{project_context}
+
+The user is answering: **{field_display_names[field_name]}**
+
+Guidance: {field_guidance[field_name]}
+
+Provide brief (2-3 sentences) feedback that:
+1. Acknowledges what's good about their answer
+2. Offers 1-2 specific suggestions for improvement if needed
+3. Is encouraging and supportive
+
+Keep it concise and actionable. Use a friendly tone with emojis where appropriate."""
+
+        user_prompt = f"""Provide feedback on this answer:{previous_context}
+
+**{field_display_names[field_name]}:**
+{answer}"""
+
+        try:
+            feedback = self.main_chat.call_claude(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.7
+            )
+            return f"**Feedback on your {field_display_names[field_name]}:**\n\n{feedback}"
+        except Exception as e:
+            logger.error("Failed to generate field feedback", error=str(e))
+            return f"✅ Got your {field_display_names[field_name]}!"
 
     def _parse_problem_revision(self, message: str) -> Optional[Dict[str, str]]:
         """Parse problem revision from user message using Claude."""
