@@ -201,9 +201,59 @@ What do you think? Does this project excite you? (Yes/No or request changes)"""
         return message
 
     def _generate_problem_prompt(self, context: Dict[str, Any]) -> str:
-        """Generate problem definition prompt."""
+        """Generate problem definition prompt - step by step."""
 
-        return """Now let's define the specific problem you'll address in this project.
+        step = context.get("step", "intro")
+
+        if step == "intro" or step == "statement":
+            return """Now let's define the specific problem you'll address in this project.
+
+I'll guide you through this step by step. Let's start with the first question:
+
+**1. Problem Statement** (1-2 sentences)
+
+What specific problem are you solving? Be clear and concise.
+
+Example: "Many small business owners struggle to track their expenses efficiently, leading to poor financial decisions."
+
+Your answer:"""
+
+        elif step == "audience":
+            return """Great! Now let's identify who experiences this problem.
+
+**2. Target Audience**
+
+Who specifically experiences this problem? Be as specific as possible about the group, their characteristics, or their situation.
+
+Example: "Small business owners with 1-10 employees who manage finances manually without dedicated accounting software."
+
+Your answer:"""
+
+        elif step == "pain_points":
+            return """Perfect! Now let's understand the key pain points.
+
+**3. Key Pain Points**
+
+What are the main pain points or challenges your target audience faces related to this problem? You can list multiple points.
+
+Example: "Time-consuming manual entry, difficulty categorizing expenses, lack of visibility into spending patterns, missed tax deductions."
+
+Your answer:"""
+
+        elif step == "metrics":
+            return """Excellent! Finally, let's define success metrics.
+
+**4. Success Metrics**
+
+How will you measure if you've addressed the problem well? What outcomes or metrics will demonstrate success? (You can list multiple metrics)
+
+Example: "Reduced time spent on expense tracking by 50%, improved expense categorization accuracy, increased visibility into spending patterns."
+
+Your answer:"""
+
+        else:
+            # Fallback to original prompt
+            return """Now let's define the specific problem you'll address in this project.
 
 A strong problem definition should:
 - Identify a specific pain point or opportunity
@@ -211,17 +261,7 @@ A strong problem definition should:
 - Explain why it matters
 - Be addressable in 2-3 weeks
 
-Please provide:
-
-1. **Problem Statement** (1-2 sentences): What specific problem are you solving?
-
-2. **Target Audience**: Who experiences this problem?
-
-3. **Context**: Why does this problem matter? What's the current situation?
-
-4. **Success Metrics**: How will you measure if you've addressed the problem well?
-
-Take your time to think through this carefully."""
+Please provide your problem definition."""
 
     def _generate_problem_feedback(self, context: Dict[str, Any]) -> str:
         """Generate problem evaluation feedback."""
@@ -253,7 +293,7 @@ Take your time to think through this carefully."""
 {chr(10).join(f"- {s}" for s in feedback.get('strengths', [])) if feedback.get('strengths') else 'Getting your ideas down'}
 
 **Suggestions for Improvement:**
-{chr(10).join(f"- {s}" for s in feedback.get('suggestions', []))}
+{chr(10).join(f"- {s}" for s in feedback.get('improvement_suggestions', []))}
 
 **Scores:**
 """
@@ -263,7 +303,18 @@ Take your time to think through this carefully."""
             if feedback.get('example_improvements'):
                 message += f"\n**Examples:**\n{feedback['example_improvements']}"
 
-            message += "\n\nPlease revise your problem definition based on this feedback."
+            message += """
+
+---
+
+Please revise your problem definition based on this feedback. You can provide your complete revised problem definition addressing:
+
+1. **Problem Statement**: What specific problem are you solving?
+2. **Target Audience**: Who experiences this problem?
+3. **Key Pain Points**: What are the main challenges?
+4. **Success Metrics**: How will you measure success?
+
+Provide your revised problem definition:"""
 
         return message
 

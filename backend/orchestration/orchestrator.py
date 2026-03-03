@@ -331,30 +331,203 @@ class Orchestrator:
                 return "I didn't catch that. Do you approve this project? (Yes/No)"
 
     def _handle_problem_definition(self, user_state: UserState, message: str) -> str:
-        """Handle problem definition state."""
+        """Handle problem definition state - step-by-step guidance."""
 
-        # First time? Prompt for problem
-        if not user_state.context.get("problem_submitted"):
-            if user_state.context.get("awaiting_problem"):
-                # User is submitting problem definition
-                return self._evaluate_problem(user_state, message)
-            else:
-                # Show problem prompt
-                user_state.context["awaiting_problem"] = True
-                self.logging_module.save_user_state(user_state)
+        # Initialize problem definition step tracking
+        if not user_state.context.get("problem_step"):
+            user_state.context["problem_step"] = "statement"
+            user_state.context["problem_data"] = {}
+            self.logging_module.save_user_state(user_state)
+            return self.main_chat.generate_message("problem_prompt", {"step": "statement"})
 
-                return self.main_chat.generate_message("problem_prompt", {})
+        # Get current step
+        current_step = user_state.context.get("problem_step")
 
-        # Problem was evaluated but not approved
-        elif not user_state.problem_approved:
-            # User is resubmitting
-            return self._evaluate_problem(user_state, message)
-
-        else:
+        # If problem already approved, no more changes
+        if user_state.problem_approved:
             return "Your problem definition is already approved! Moving forward..."
 
+        # Store the answer and move to next step
+        if current_step == "statement":
+            user_state.context["problem_data"]["problem_statement"] = message
+            user_state.context["problem_step"] = "audience"
+            self.logging_module.save_user_state(user_state)
+            return self.main_chat.generate_message("problem_prompt", {"step": "audience"})
+
+        elif current_step == "audience":
+            user_state.context["problem_data"]["target_audience"] = message
+            user_state.context["problem_step"] = "pain_points"
+            self.logging_module.save_user_state(user_state)
+            return self.main_chat.generate_message("problem_prompt", {"step": "pain_points"})
+
+        elif current_step == "pain_points":
+            user_state.context["problem_data"]["key_pain_points"] = message
+            user_state.context["problem_step"] = "metrics"
+            self.logging_module.save_user_state(user_state)
+            return self.main_chat.generate_message("problem_prompt", {"step": "metrics"})
+
+        elif current_step == "metrics":
+            user_state.context["problem_data"]["success_metrics"] = message
+            # All fields collected, now evaluate
+            return self._evaluate_problem_from_steps(user_state)
+
+        elif current_step == "revising":
+            # User is revising after failed evaluation
+            # Try to parse the revision using Claude
+            revision_parsed = self._parse_problem_revision(message)
+
+            if revision_parsed:
+                # Update problem data with parsed revision
+                user_state.context["problem_data"].update(revision_parsed)
+                self.logging_module.save_user_state(user_state)
+                return self._evaluate_problem_from_steps(user_state)
+            else:
+                # If parsing fails, ask for clarification
+                return "I couldn't parse your revision. Please provide all four components:\n\n1. Problem Statement\n2. Target Audience\n3. Key Pain Points\n4. Success Metrics"
+
+        else:
+            # Reset if in unknown state
+            user_state.context["problem_step"] = "statement"
+            user_state.context["problem_data"] = {}
+            self.logging_module.save_user_state(user_state)
+            return self.main_chat.generate_message("problem_prompt", {"step": "statement"})
+
+    def _parse_problem_revision(self, message: str) -> Optional[Dict[str, str]]:
+        """Parse problem revision from user message using Claude."""
+
+        try:
+            system_prompt = """You are a parser that extracts structured problem definition data from user messages.
+
+Extract the following fields from the user's message:
+1. problem_statement
+2. target_audience
+3. key_pain_points
+4. success_metrics
+
+Return a JSON object with these fields. If a field is not clearly present, return null for that field.
+
+Example output:
+{
+  "problem_statement": "...",
+  "target_audience": "...",
+  "key_pain_points": "...",
+  "success_metrics": "..."
+}
+
+Only return the JSON object, nothing else."""
+
+            user_prompt = f"""Parse this problem definition and extract the four fields:
+
+{message}"""
+
+            response = self.main_chat.call_claude(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.1
+            )
+
+            # Try to parse JSON from response
+            import json
+            # Clean up response - extract JSON if wrapped
+            response = response.strip()
+            if response.startswith('```'):
+                # Remove markdown code blocks
+                lines = response.split('\n')
+                response = '\n'.join(lines[1:-1]) if len(lines) > 2 else response
+
+            parsed = json.loads(response)
+
+            # Check if we got at least some fields
+            if any(parsed.get(field) for field in ['problem_statement', 'target_audience', 'key_pain_points', 'success_metrics']):
+                # Filter out null values
+                return {k: v for k, v in parsed.items() if v is not None}
+
+            return None
+
+        except Exception as e:
+            logger.error("Failed to parse problem revision", error=str(e))
+            return None
+
+    def _evaluate_problem_from_steps(self, user_state: UserState) -> str:
+        """Evaluate problem definition collected step-by-step."""
+
+        problem_data = user_state.context.get("problem_data", {})
+
+        # Parse success metrics (could be comma-separated or newline-separated)
+        metrics_text = problem_data.get("success_metrics", "")
+        if isinstance(metrics_text, str):
+            # Split by newlines or commas
+            metrics = [m.strip() for m in metrics_text.replace('\n', ',').split(',') if m.strip()]
+            if not metrics:
+                metrics = [metrics_text]
+        else:
+            metrics = [metrics_text]
+
+        # Create problem definition from collected data
+        problem = ProblemDefinition(
+            problem_id=user_state.problem_id or f"prob_{uuid.uuid4().hex[:8]}",
+            project_id=user_state.project_id,
+            user_id=user_state.user_id,
+            problem_statement=problem_data.get("problem_statement", ""),
+            target_audience=problem_data.get("target_audience", ""),
+            problem_context=problem_data.get("key_pain_points", ""),
+            success_metrics=metrics
+        )
+
+        # Evaluate with tutor
+        request_id = f"req_{uuid.uuid4().hex[:8]}"
+
+        tutor_input = ProblemSolutionTutorInput(
+            user_id=user_state.user_id,
+            request_id=request_id,
+            project_id=user_state.project_id,
+            mode="problem",
+            problem_definition=problem
+        )
+
+        tutor_output = self.problem_solution_tutor.process(tutor_input)
+
+        # Update problem with evaluation
+        problem.evaluation_passed = tutor_output.evaluation_passed
+        problem.evaluation_feedback = tutor_output.overall_feedback
+
+        for key, value in tutor_output.scores.items():
+            setattr(problem, f"{key}_score", value)
+
+        problem.improvement_suggestions = tutor_output.improvement_suggestions
+
+        # Save problem
+        if not user_state.problem_id:
+            user_state.problem_id = problem.problem_id
+
+        self.logging_module.save_problem_definition(problem)
+        user_state.context["problem_submitted"] = True
+
+        if tutor_output.evaluation_passed:
+            problem.approved_at = datetime.utcnow()
+            self.logging_module.save_problem_definition(problem)
+
+            user_state.problem_approved = True
+            self.logging_module.save_user_state(user_state)
+
+            # Transition to solution design
+            return self.main_chat.generate_message(
+                "problem_feedback",
+                {"feedback": tutor_output.model_dump(), "passed": True}
+            ) + "\n\n" + self._transition_to_solution_design(user_state)
+
+        else:
+            # Set step to revising so user can update
+            user_state.context["problem_step"] = "revising"
+            self.logging_module.save_user_state(user_state)
+
+            return self.main_chat.generate_message(
+                "problem_feedback",
+                {"feedback": tutor_output.model_dump(), "passed": False}
+            )
+
     def _evaluate_problem(self, user_state: UserState, message: str) -> str:
-        """Evaluate problem definition."""
+        """Evaluate problem definition (legacy method for backward compatibility)."""
 
         # Parse problem from message (simplified - in production, use structured form)
         problem = ProblemDefinition(
